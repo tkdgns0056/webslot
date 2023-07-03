@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/default.html}"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" xmlns="http://www.w3.org/1999/html">
+
+<th:block layout:fragment="content">
+    <h1 class="h3 mb-3"><strong>회원</strong> 관리</h1>
+
+    <div class="row">
+        <div class="col-12 d-flex">
+            <div class="flex-fill mb-3">
+                <div class="row">
+                    <div class="col-6">
+                        <input type="text" id="searchText" th:value="${searchText}" class="form-control" placeholder="검색어">
+                    </div>
+                    <div class="col-auto">
+                        <button class="btn btn-primary " onclick="searchMember()">검색</button>
+                    </div>
+                    <div class="col text-end">
+                        <button class="btn btn-primary" onclick="appendMember()">추가</button>
+                        <button class="btn btn-primary" onclick="deleteMebmer()">삭제</button>
+                        <button class="btn btn-primary" onclick="saveMember()">저장</button>
+                        <!--                        <button class="btn btn-primary">수정</button>-->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+
+    <div class="row">
+        <div class="col-12 d-flex">
+            <div class="card flex-fill">
+
+                <table id="list" class="table table-hover my-0">
+                    <thead>
+                    <tr>
+                        <th>
+                            <input class="form-check-input" id="check-all" type="checkbox">
+                        </th>
+                        <th class="d-none d-xl-table-cell">아이디</th>
+                        <th class="d-none d-xl-table-cell">비밀번호</th>
+                        <th class="d-none d-md-table-cell">권한</th>
+                        <th class="d-none d-md-table-cell">사용구분</th>
+                        <th class="d-none d-md-table-cell">메모</th>
+                        <th class="d-none d-md-table-cell">총슬롯</th>
+                        <th class="d-none d-md-table-cell">슬롯등록</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+
+                    <tr data-type="old" th:each="member,iterStat  : ${pageInfo.list}">
+                        <td>
+                            <input class="form-check-input check" type="checkbox">
+                        </td>
+                        <td class="d-none d-md-table-cell" >
+                            <input class="form-control f-member-id" th:value="${member.memberId}" type="text" disabled>
+                        </td>
+                        <td class="d-none d-md-table-cell" >
+                            <input class="form-control f-password" type="text" th:value="${member.password}">
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <select class="form-select f-role-id">
+                                <option th:value="USER" th:selected="${member.roleId eq 'USER'}" >회원</option>
+                                <option sec:authorize="hasAnyAuthority('ADMIN')" th:value="DS" th:selected="${member.roleId eq 'DS'}">총판</option>
+                            </select>
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <select class="form-select f-use-yn">
+                                <option th:value="Y" th:selected="${member.useYn eq 'Y'}">사용</option>
+                                <option th:value="N" th:selected="${member.useYn eq 'N'}">미사용</option>
+                            </select>
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-memo" type="text" th:value="${member.memo}">
+                        </td>
+                        <td class="d-none d-md-table-cell" >
+
+                            <span th:if="${member.slotTotalCnt > 0}" class="badge bg-success" th:text="${member.slotTotalCnt}">Done</span>
+                            <span th:unless="${member.slotTotalCnt > 0}" class="badge bg-danger" th:text="${member.slotTotalCnt}">Done</span>
+
+                        </td>
+                        <td>
+                            <a th:href="'/pay/list?memberId=' + ${member.memberId}" class="btn btn-primary">등록</a>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <th:block th:include="~{/layout/fragments/paging.html}" />
+</th:block>
+
+<th:block layout:fragment="script">
+    <script type="text/javascript" th:inline="javascript">
+
+        $("#list").on("input", "[class*='f-']", function(){
+            $(this).closest("tr").find(".check").prop("checked", true);
+        })
+
+        let deleteMemberIds = [];
+        let saveMembers = [];
+        let roleId = /*[[${#authentication.principal.member.roleId}]]*/null;
+
+        // 올 체크 처리
+        $("#check-all").click(function(){
+            const checked = $(this).prop("checked");
+            if(checked){
+                $(".check").prop("checked", true);
+            } else{
+                $(".check").prop("checked", false);
+            }
+        })
+
+        // 사용자 저장
+        function saveMember(){
+
+            let isValidate = true;
+            let message = '';
+
+            $(".check:checked").each(function(index){
+                const $tr = $(this).closest("tr");
+                const memberId = $tr.find(".f-member-id").val();
+                const password = $tr.find(".f-password").val();
+
+                if(!memberId){
+                    isValidate = false;
+                    message = `[ERROR][${index + 1}행] 아이디를 입력하세요.`;
+                    return false;
+                }
+
+                if(!password){
+                    isValidate = false;
+                    message = `[ERROR][${index + 1}행] 비밀번호를 입력하세요.`;
+                    return false;
+                }
+
+                saveMembers.push({
+                    memberId : memberId,
+                    password : password,
+                    type: $tr.data('type'),
+                    roleId : $tr.find(".f-role-id").val(),
+                    useYn : $tr.find(".f-use-yn").val(),
+                    memo : $tr.find(".f-memo").val()
+                })
+            })
+
+            if(!isValidate){
+                alert(message)
+                return;
+            }
+
+            // ajax 통신
+            $.ajax({
+                type : "POST",
+                contentType: "application/json",
+                url : "/member/save",
+                data :JSON.stringify( {
+                    saveMembers: saveMembers,
+                    deleteMemberIds: deleteMemberIds
+                }),
+                success : function(response){
+                    alert("저장 되었습니다.");
+                    location.reload();
+                },
+                error: function (response, status, error){
+                    alert(response.responseText);
+                    saveMembers = [];
+                    deleteMemberIds = [];
+                }
+            });
+        }
+
+        // 사용자 삭제
+        function deleteMebmer(){
+            $(".check:checked").each(function(){
+                const $tr = $(this).closest("tr");
+                const type  = $tr.data("type");
+
+                if( type === 'old'){
+                    deleteMemberIds.push( $tr.find(".f-member-id").val())
+                }
+
+                $tr.remove()
+            })
+        }
+
+        // 사용자 검색
+        function searchMember(){
+            const searchText = $("#searchText").val();
+            location.href = `/member/list?searchText=${searchText}`
+        }
+
+        // 사용자 추가
+        function appendMember(){
+            $("#list tbody").prepend(
+                `<tr data-type="new">
+                        <td>
+                            <input class="form-check-input check" type="checkbox" checked>
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-member-id" type="text" value="">
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-password" type="text" value="">
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <select class="form-select f-role-id">
+                                <option value="USER" selected="selected">회원</option>
+                                ${roleId === 'ADMIN' ? '<option value="DS">총판</option>' : ''}
+                            </select>
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <select class="form-select f-use-yn">
+                                <option value="Y" selected="selected">사용</option>
+                                <option value="N">미사용</option>
+                            </select>
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-memo" type="text" value="">
+                        </td>
+                        <td class="d-none d-md-table-cell"></td>
+                        <td>
+                        </td>
+                    </tr>
+                    `
+            )
+        }
+    </script>
+</th:block>
+
+
+</html>

@@ -1,0 +1,9 @@
+spring:
+  main:
+    allow-circular-references: true
+
+#pagehelper setting(사용하는 DB, 페이지 번호의 가능 범위 자동 제한)
+pagehelper:
+  helper-dialect: mysql #db
+  reasonable: true   # 페이지 번호 0 또는 음수 인 경우, 첫 페이지로 간주
+  support-methods-arguments: true  # pageHelper를 메소드의 인자로 사용 할 수 있도록 설정

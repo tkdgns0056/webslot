@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/default.html}"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<th:block layout:fragment="content">
+
+    <h1 class="h3 mb-3"><strong>정산</strong> 내보내기</h1>
+
+    <div class="row">
+        <div class="col-12 d-flex">
+            <div class="card flex-fill">
+
+                <table id="list" class="table table-hover my-0">
+                    <colgroup>
+                        <col width="40%">
+                        <col width="60%">
+                    </colgroup>
+                    <thead>
+                    <tr>
+                        <th class="d-none d-xl-table-cell">총판 아이디</th>
+                        <th class="d-none d-xl-table-cell">내려받기</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+
+                    <tr>
+                        <td class="d-none d-md-table-cell">
+                            <input id="calcManagerId" class="form-control" type="text" >
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <button class="btn btn-primary" onclick="downloadCalcExcel()" >정산자료 내려받기</button>
+                        </td>
+                    </tr>
+
+
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <h1 class="h3 mb-3"><strong>엑셀</strong> 내보내기</h1>
+
+    <div class="row">
+        <div class="col-12 d-flex">
+            <div class="card flex-fill">
+
+                <table id="list" class="table table-hover my-0">
+                    <thead>
+                    <tr>
+                        <th class="d-none d-xl-table-cell">업체명</th>
+                        <th class="d-none d-xl-table-cell">내려받기</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+
+                    <tr>
+                        <td class="d-none d-md-table-cell">A업체</td>
+                        <td class="d-none d-md-table-cell">
+                            <button class="btn btn-primary" onclick="downloadPcExcel()" >PC엑셀다운로드</button>
+                        </td>
+                    </tr>
+                    
+                    <tr>
+                        <td class="d-none d-md-table-cell">B업체</td>
+                        <td class="d-none d-md-table-cell">
+                            <button class="btn btn-primary" onclick="downloadMobileExcel()" >Mobile 엑셀다운로드</button>
+                        </td>
+                    </tr>
+                    
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</th:block>
+
+<th:block layout:fragment="script">
+    <script type="text/javascript" th:inline="javascript">
+
+        function downloadPcExcel(){
+            common.excel.download({
+                serviceName: "excelService"
+                , templateName: "PcList"
+                , saveName: "PC 키워드 목록"
+                , uid: "PC"
+                , params: {}
+                ,callback: function(){
+
+                }
+                ,error : function(result){
+
+                }
+            })
+        }
+
+        function downloadCalcExcel( ){
+
+            const managerId = $("#calcManagerId").val();
+
+            common.excel.download({
+                serviceName: "excelService"
+                , templateName: "CalcList"
+                , saveName: "정산자료_" + managerId
+                , uid: "CALC"
+                , params: {
+                    managerId : managerId
+                }
+                ,callback: function(){
+
+                }
+                ,error : function(result){
+
+                }
+            })
+        }
+
+
+        function downloadMobileExcel(){
+            common.excel.download({
+                serviceName: "excelService"
+                , templateName: "MobileList"
+                , saveName: "Mobile 키워드 목록"
+                , uid: "MOBILE"
+                , params: {}
+                ,callback: function(){
+
+                }
+                ,error : function(result){
+
+                }
+            })
+        }
+    </script>
+</th:block>
+
+
+</html>

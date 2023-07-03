@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<nav id="sidebar" class="sidebar js-sidebar">
+    <div class="sidebar-content js-simplebar">
+        <a class="sidebar-brand" href="/">
+            <span class="align-middle">hexv</span>
+        </a>
+
+        <ul class="sidebar-nav">
+            <li th:class="'sidebar-item ' + ${#httpServletRequest.getServletPath() eq '/' ? 'active' : ''}">
+                <a class="sidebar-link" href="/">
+                    <i class="align-middle" data-feather="airplay"></i> <span class="align-middle">대시보드</span>
+                </a>
+            </li>
+
+            <li th:class="'sidebar-item ' + ${#httpServletRequest.getServletPath() eq '/member/list' ? 'active' : ''}" sec:authorize="hasAnyAuthority('ADMIN', 'DS')">
+                <a class="sidebar-link" href="/member/list">
+                    <i class="align-middle" data-feather="user"></i> <span class="align-middle">회원관리</span>
+                </a>
+            </li>
+
+            <li th:class="'sidebar-item ' + ${#httpServletRequest.getServletPath() eq '/pay/info/list' ? 'active' : ''}">
+                <a class="sidebar-link" href="/pay/info/list">
+                    <i class="align-middle" data-feather="dollar-sign"></i> <span class="align-middle">결제정보</span>
+                </a>
+            </li>
+
+            <li th:class="'sidebar-item ' + ${#httpServletRequest.getServletPath() eq '/excel/list' ? 'active' : ''}" sec:authorize="hasAuthority('ADMIN')">
+                <a class="sidebar-link" href="/excel/list">
+                    <i class="align-middle" data-feather="download"></i> <span class="align-middle">엑셀 Export</span>
+                </a>
+            </li>
+        </ul>
+    </div>
+</nav>

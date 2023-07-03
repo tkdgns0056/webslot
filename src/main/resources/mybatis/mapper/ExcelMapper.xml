@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.slotweb.service.excel.ExcelMapper">
+
+
+<!--    그룹명	검색어	상품명	카테고리번호	MID	서비스키워드	메인키워드	메모	시작일	만료일-->
+<!--    기본그룹	o	o	o	o	o	X	o	x	x-->
+
+    <select id="selectPcList" resultType="map" fetchSize="5000">
+        select
+            s.keyword,
+            s.product_name,
+            s.category_no,
+            s.mid,
+            s.sub_keyword,
+            s.memo
+        from slot s
+        inner join pay p on
+            s.pay_no = p.pay_no
+        where 1 = 1
+          and s.type = 'P'
+          and p.del_yn = 'N'
+          and p.end_dt <![CDATA[ >= ]]> now()
+          and p.start_dt <![CDATA[ <= ]]> now()
+    </select>
+
+
+    <select id="selectMobileList" resultType="map" fetchSize="5000">
+        select
+            s.keyword,
+            s.category_no,
+            s.mid,
+            s.ms,
+            s.memo
+        from slot s
+                 inner join pay p on
+            s.pay_no = p.pay_no
+        where 1 = 1
+          and s.type = 'M'
+          and p.del_yn = 'N'
+          and p.end_dt <![CDATA[ >= ]]> now()
+          and p.start_dt <![CDATA[ <= ]]> now()
+    </select>
+
+<!--    소속	ID	시작일자	종료일자	슬롯	생성일시	삭제구분-->
+
+    <select id="selectCalcList" parameterType="map" resultType="map" fetchSize="5000">
+
+        select
+            p.type,
+            p.start_dt,
+            p.end_dt,
+            p.slot_cnt,
+            m.manager_id,
+            m.member_id,
+            p.slot_cnt,
+            case
+                when p.del_yn = 'Y' then '삭제'
+                when p.end_dt <![CDATA[ < ]]> now() then '종료'
+                else '활성'
+                end as status
+        from pay p
+        inner join member m on
+            p.member_id = m.member_id
+        and p.member_id in (
+            select member_id
+            from member
+            where manager_id = #{managerId}
+        )
+
+    </select>
+
+    <insert id="saveExcelSlot">
+
+        insert into slot
+        (
+        SLOT_NO        /* 슬롯번호 */
+        ,PAY_NO        /* 결제번호 */
+        ,MEMBER_ID        /* 회원아이디 */
+        ,PRODUCT_NAME        /* 상품명 */
+        ,TYPE        /* 검색키워드 타입 */
+        ,KEYWORD        /* 검색키워드 */
+        ,SUB_KEYWORD        /* 서브키워드 */
+        ,CATEGORY_NO        /* 카테고리번호 */
+        ,MID        /* MID값 */
+        ,MS        /* MS값 */
+        ,MEMO        /* 메모 */
+        )
+        VALUES
+        <foreach item="item" index="index" collection="list" separator="," >
+            (
+            #{item.slotNo}        /* 슬롯번호 */
+            ,#{item.payNo}        /* 결제번호 */
+            ,#{item.memberId}        /* 회원아이디 */
+            ,#{item.productName}        /* 상품명 */
+            ,#{item.type}        /* 검색키워드 타입 */
+            ,#{item.keyword}        /* 검색키워드 */
+            ,#{item.subKeyword}        /* 서브키워드 */
+            ,#{item.categoryNo}        /* 카테고리번호 */
+            ,#{item.mid}        /* MID값 */
+            ,#{item.ms}        /* MS값 */
+            ,#{item.memo}        /* 메모 */
+            )
+        </foreach>
+        <!--삽입하려는 레코드가 이미 테이블에 존재하는 경우, 해당 레코드를 업데이트하는 부분
+         기존 레코드와 삽입하려는 레코드의 값이 중복될 경우, 아래에 명시된 열들의 값을 업데이트-->
+        ON DUPLICATE KEY UPDATE
+        product_name = VALUES( product_name ),
+        keyword = VALUES( keyword ),
+        sub_keyword = VALUES( sub_keyword ),
+        category_no =VALUES(category_no ),
+        mid =VALUES(mid ),
+        ms =VALUES(ms ),
+        memo =VALUES(memo )
+    </insert>
+
+
+</mapper>

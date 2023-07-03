@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/default.html}"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<th:block layout:fragment="content">
+
+  <h1 class="h3 mb-3"><strong>결제</strong> 정보</h1>
+  <div class="row">
+    <div class="col-12 d-flex">
+      <div class="card flex-fill">
+
+        <table id="list" class="table table-hover my-0">
+          <thead>
+          <tr>
+            <th class="d-none d-xl-table-cell">슬롯타입</th>
+            <th class="d-none d-xl-table-cell">시작일자</th>
+            <th class="d-none d-xl-table-cell">종료일자</th>
+            <th class="d-none d-md-table-cell">슬롯수</th>
+            <th class="d-none d-md-table-cell">종료여부</th>
+          </tr>
+          </thead>
+          <tbody>
+
+          <tr data-type="old" th:each="pay,iterStat : ${pageInfo.list}">
+            <td class="d-none d-md-table-cell">
+              <span th:if="${pay.type eq 'P'}">PC</span>
+              <span th:if="${pay.type eq 'M'}">MOBILE</span>
+            </td>
+            <td class="d-none d-md-table-cell" th:text="${pay.startDt}"></td>
+            <td class="d-none d-md-table-cell" th:text="${pay.endDt}"></td>
+            <td class="d-none d-md-table-cell" th:text="${pay.slotCnt}"></td>
+            <td class="d-none d-md-table-cell">
+              <span th:if="${pay.delYn eq 'D'}" style="color: red; font-weight: bold">삭제</span>
+              <span th:if="${pay.delYn eq 'E'}" style="color: orange; font-weight: bold">종료</span>
+              <span th:if="${pay.delYn eq 'N'}" style="color: green; font-weight: bold">활성</span>
+            </td>
+          </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+    <input type="hidden" id="memberId" th:value="${param.memberId}">
+    <!--        <th:block th:with="pageInfo=${memberPayInfoList}" th:include="~{/layout/fragments/paging.html}" />-->
+    <th:block th:include="~{/layout/fragments/paging.html}" />
+  </div>
+
+</th:block>
+
+<th:block layout:fragment="script">
+  <script type="text/javascript" th:inline="javascript">
+
+    $('.datepicker').datepicker({format: "yyyy-mm-dd", language: 'ko'});
+
+    let deletePayNos = [];
+    let savePays = [];
+    let roleId = /*[[${#authentication.principal.member.roleId}]]*/null;
+    // 올 체크 처리
+    $("#check-all").click(function () {
+      const checked = $(this).prop("checked");
+      if (checked) {
+        $(".check").prop("checked", true);
+      } else {
+        $(".check").prop("checked", false);
+      }
+    })
+
+
+
+    // 결제 저장
+    function savePay() {
+
+      $(".check:checked").each(function () {
+        const $tr = $(this).closest("tr");
+
+        savePays.push({
+          payNo: $tr.data("payno") ? $tr.data("payno") : null,
+          memberId: $("#memberId").val(),
+          type: $tr.find(".f-type").val(),
+          slotCnt: $tr.find(".f-slot-cnt").val(),
+          startDt: $tr.find(".f-start-dt").val(),
+          endDt: $tr.find(".f-end-dt").val(),
+          memo: $tr.find(".f-memo").val()
+        })
+      })
+
+      // ajax 통신
+      $.ajax({
+        type: "POST",
+        contentType: "application/json",
+        url: "/pay/save",
+        data: JSON.stringify({
+          savePays: savePays,
+          deletePayIds: deletePayNos
+        }),
+        success: function (response) {
+          alert("저장 되었습니다.");
+          location.reload();
+        },
+        error: function (request, status, error) {
+          alert("에러 발생");
+          deletePayNos = [];
+          savePays = [];
+        }
+      });
+    }
+
+    // 결제 삭제
+    function deletePay() {
+      $(".check:checked").each(function () {
+        const $tr = $(this).closest("tr");
+        const type = $tr.data("type");
+
+        if (type === 'old') {
+          deletePayNos.push($tr.data("payno"))
+        }
+
+        $tr.remove()
+      })
+    }
+
+    // 사용자 검색
+    function searchMember() {
+      const searchText = $("#searchText").val();
+      location.href = `/member/list?searchText=${searchText}`
+    }
+
+    // 사용자 추가
+    function appendPay() {
+      $("#list tbody").prepend(
+              `<tr data-type="new">
+                        <td>
+                            <input class="form-check-input check" type="checkbox" checked>
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <select class="form-select f-type">
+                                <option value="P" selected="selected">PC</option>
+                                <option value="M">MOBILE</option>
+                            </select>
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-slot-cnt" type="text" value="">
+                        </td>
+
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-start-dt datepicker" readonly="" type="text" value="${moment().format('YYYY-MM-DD')}">
+                        </td>
+
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-end-dt datepicker" type="text" readonly="" value="${moment().add(30, 'days').format('YYYY-MM-DD')}">
+                        </td>
+
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-memo" type="text" value="">
+                        </td>
+
+
+                    </tr>
+                    `
+      )
+
+      $('.datepicker').datepicker({format: "yyyy-mm-dd", language: 'ko'});
+    }
+  </script>
+</th:block>
+
+
+</html>

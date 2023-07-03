@@ -1,0 +1,16 @@
+server:
+  error:
+    path: /error
+
+spring:
+  thymeleaf:
+    prefix: classpath:/templates/
+
+  datasource:
+    url: jdbc:mysql://localhost:3306/slot
+    username: root
+    password: tiger
+#    url: jdbc:mysql://ec2-3-34-124-93.ap-northeast-2.compute.amazonaws.com:3306/slot
+#    username: root
+#    password: 1234
+    driver-class-name: com.mysql.cj.jdbc.Driver

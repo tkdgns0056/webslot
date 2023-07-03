@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/default.html}"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<th:block layout:fragment="content">
+
+    <div sec:authorize="hasAuthority('ADMIN')">
+        <h1 class="h3 mb-3"><strong>회원</strong> 정보</h1>
+
+        <div class="row">
+            <div class="col-12 d-flex">
+                <div class="card flex-fill">
+
+                    <table id="list" class="table table-hover my-0">
+                        <thead>
+                        <tr>
+                            <th class="d-none d-xl-table-cell">상태</th>
+                            <th class="d-none d-xl-table-cell">총판 아이디</th>
+                            <th class="d-none d-xl-table-cell">회원 아이디</th>
+                            <th class="d-none d-xl-table-cell">총 슬롯수</th>
+                            <th class="d-none d-xl-table-cell">조회</th>
+                            <!--                            <th class="d-none d-xl-table-cell">정산자료</th>-->
+                        </tr>
+                        </thead>
+                        <tbody>
+
+                        <tr data-type="old" th:data-managerid="${pay.managerId}" th:data-memberid="${pay.memberId}" th:each="pay,iterStat: ${pageInfo.list}">
+                            <td class="d-none d-md-table-cell">
+                                <span th:if="${pay.delYn eq 'Y'}" class="badge bg-danger" >삭제</span>
+                                <span th:unless="${pay.delYn eq 'Y'}" class="badge bg-success" >활성</span>
+                            </td>
+                            <td class="d-none d-md-table-cell" th:text="${pay.managerId}"></td>
+                            <td class="d-none d-md-table-cell" th:text="${pay.memberId}"></td>
+                            <td class="d-none d-md-table-cell">
+                                <th:block th:if="${pay.delYn eq 'Y'}">
+                                    <span class="badge bg-danger" th:text="0">Done</span>
+                                </th:block>
+                                <th:block th:unless="${pay.delYn eq 'Y'}">
+                                    <span th:if="${pay.slotCnt > 0}" class="badge bg-success" th:text="${pay.slotCnt}">Done</span>
+                                    <span th:unless="${pay.slotCnt > 0}" class="badge bg-danger" th:text="${pay.slotCnt}">Done</span>
+                                </th:block>
+                            </td>
+                            <td class="d-none d-md-table-cell">
+                                <a th:href="'/pay/info/member/list?memberId=' + ${pay.memberId}" class="btn btn-primary">조회</a>
+                            </td>
+                            <!--                            <td class="d-none d-md-table-cell">-->
+                            <!--                                <button class="btn btn-primary" onclick="downloadCalcExcel(this)" >내보내기</button>-->
+                            <!--                            </td>-->
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <th:block th:include="~{/layout/fragments/paging.html}" />
+    </div>
+
+
+    <div sec:authorize="hasAuthority('DS')">
+        <h1 class="h3 mb-3"><strong>회원</strong> 정보</h1>
+
+        <div class="row">
+            <div class="col-12 d-flex">
+                <div class="card flex-fill">
+
+                    <table id="list" class="table table-hover my-0">
+                        <thead>
+                        <tr>
+                            <th class="d-none d-xl-table-cell">상태</th>
+                            <th class="d-none d-xl-table-cell">회원 아이디</th>
+                            <th class="d-none d-xl-table-cell">총 슬롯수</th>
+                            <th class="d-none d-xl-table-cell">조회</th>
+
+                        </tr>
+                        </thead>
+                        <tbody>
+
+                        <tr data-type="old" th:each="pay,iterStat : ${pageInfo.list}">
+                            <td class="d-none d-md-table-cell">
+                                <span th:if="${pay.delYn eq 'Y'}" class="badge bg-danger" >삭제</span>
+                                <span th:unless="${pay.delYn eq 'Y'}" class="badge bg-success" >활성</span>
+                            </td>
+                            <td class="d-none d-md-table-cell" th:text="${pay.memberId}"></td>
+                            <td class="d-none d-md-table-cell">
+                                <th:block th:if="${pay.delYn eq 'Y'}">
+                                    <span class="badge bg-danger" th:text="0">Done</span>
+                                </th:block>
+                                <th:block th:unless="${pay.delYn eq 'Y'}">
+                                    <span th:if="${pay.slotCnt > 0}" class="badge bg-success" th:text="${pay.slotCnt}">Done</span>
+                                    <span th:unless="${pay.slotCnt > 0}" class="badge bg-danger" th:text="${pay.slotCnt}">Done</span>
+                                </th:block>
+                            </td>
+                            <td class="d-none d-md-table-cell">
+                                <a th:href="'/pay/info/member/list?memberId=' + ${pay.memberId}" class="btn btn-primary">조회</a>
+                            </td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+        <th:block th:include="~{/layout/fragments/paging.html}" />
+    </div>
+
+</th:block>
+
+<th:block layout:fragment="script">
+    <script type="text/javascript" th:inline="javascript">
+
+        $('.datepicker').datepicker({format: "yyyy-mm-dd", language: 'ko'});
+
+        let deletePayNos = [];
+        let savePays = [];
+        let roleId = /*[[${#authentication.principal.member.roleId}]]*/null;
+        // 올 체크 처리
+        $("#check-all").click(function () {
+            const checked = $(this).prop("checked");
+            if (checked) {
+                $(".check").prop("checked", true);
+            } else {
+                $(".check").prop("checked", false);
+            }
+        })
+
+
+
+        // 결제 저장
+        function savePay() {
+
+            $(".check:checked").each(function () {
+                const $tr = $(this).closest("tr");
+
+                savePays.push({
+                    payNo: $tr.data("payno") ? $tr.data("payno") : null,
+                    memberId: $("#memberId").val(),
+                    type: $tr.find(".f-type").val(),
+                    slotCnt: $tr.find(".f-slot-cnt").val(),
+                    startDt: $tr.find(".f-start-dt").val(),
+                    endDt: $tr.find(".f-end-dt").val(),
+                    memo: $tr.find(".f-memo").val()
+                })
+            })
+
+            // ajax 통신
+            $.ajax({
+                type: "POST",
+                contentType: "application/json",
+                url: "/pay/save",
+                data: JSON.stringify({
+                    savePays: savePays,
+                    deletePayIds: deletePayNos
+                }),
+                success: function (response) {
+                    alert("저장 되었습니다.");
+                    location.reload();
+                },
+                error: function (request, status, error) {
+                    alert("에러 발생");
+                    deletePayNos = [];
+                    savePays = [];
+                }
+            });
+        }
+
+        // 결제 삭제
+        function deletePay() {
+            $(".check:checked").each(function () {
+                const $tr = $(this).closest("tr");
+                const type = $tr.data("type");
+
+                if (type === 'old') {
+                    deletePayNos.push($tr.data("payno"))
+                }
+
+                $tr.remove()
+            })
+        }
+
+        // 사용자 검색
+        function searchMember() {
+            const searchText = $("#searchText").val();
+            location.href = `/member/list?searchText=${searchText}`
+        }
+
+        // 사용자 추가
+        function appendPay() {
+            $("#list tbody").prepend(
+                `<tr data-type="new">
+                        <td>
+                            <input class="form-check-input check" type="checkbox" checked>
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <select class="form-select f-type">
+                                <option value="P" selected="selected">PC</option>
+                                <option value="M">MOBILE</option>
+                            </select>
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-slot-cnt" type="text" value="">
+                        </td>
+
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-start-dt datepicker" readonly="" type="text" value="${moment().format('YYYY-MM-DD')}">
+                        </td>
+
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-end-dt datepicker" type="text" readonly="" value="${moment().add(30, 'days').format('YYYY-MM-DD')}">
+                        </td>
+
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-memo" type="text" value="">
+                        </td>
+
+
+                    </tr>
+                    `
+            )
+
+            $('.datepicker').datepicker({format: "yyyy-mm-dd", language: 'ko'});
+        }
+    </script>
+</th:block>
+
+
+</html>

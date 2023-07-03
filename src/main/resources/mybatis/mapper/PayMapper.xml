@@ -1,0 +1,240 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.slotweb.service.pay.PayMapper">
+
+    <select id="selectPayList" resultType="Pay">
+            select
+                pay_no,
+                member_id,
+                type,
+                start_dt,
+                end_dt,
+                memo,
+                slot_cnt
+            from pay
+            where member_id = #{memberId}
+            and del_yn = 'N'
+    </select>
+
+    <select id="selectDsMemberPayInfoList" resultType="Pay">
+            select
+                member_id,
+                (select x.del_yn from member x where x.member_id = p.member_id ) as del_yn,
+                sum(slot_cnt)  as slot_cnt
+            from pay p
+            where 1 = 1
+            and member_id in (
+                select member_id
+                from member
+                where manager_id = #{memberId}
+            )
+            and end_dt <![CDATA[ >= ]]> now()
+            and start_dt <![CDATA[ <= ]]> now()
+            group by member_id
+
+    </select>
+
+    <select id="selectAdminMemberPayInfoList" resultType="Pay">
+        select
+            m.manager_id,
+            p.member_id,
+            (select x.del_yn from member x where x.member_id = p.member_id ) as del_yn,
+            sum(p.slot_cnt)  as slot_cnt
+        from pay p
+        left join member m on
+            p.member_id = m.member_id
+        where  1= 1
+          and end_dt <![CDATA[ >= ]]> now()
+          and start_dt <![CDATA[ <= ]]> now()
+        group by m.manager_id, p.member_id
+    </select>
+
+    <select id="selectPayInfoList"  resultType="Pay">
+            select
+                type,
+                start_dt,
+                end_dt,
+                slot_cnt,
+                case
+                    when del_yn = 'Y' then 'D'
+                    when end_dt <![CDATA[ < ]]> now() then 'E'
+                    else 'N'
+                end as del_yn
+            from pay
+            where member_id = #{memberId}
+
+    </select>
+
+    <select id="selectPayList2" resultType="Pay">
+        select
+            member_id,
+            type,
+            sum(slot_cnt) as slot_cnt
+        from pay
+        where pay_no in
+        <foreach item="item" index="index" collection="list"
+                 open="(" separator="," close=")">
+            #{item}
+        </foreach>
+        group by member_id, type
+
+    </select>
+
+    <delete id="deletePay">
+        update pay
+        set del_yn = 'Y'
+        where pay_no in
+        <foreach item="item" index="index" collection="list"
+                 open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </delete>
+
+    <insert id="savePay">
+
+        insert into pay
+        (
+            pay_no,
+            member_id,
+            type,
+            start_dt,
+            end_dt,
+            memo,
+            slot_cnt
+        )
+        VALUES
+        <foreach item="item" index="index" collection="list" separator="," >
+            (
+             #{item.payNo},
+            #{item.memberId},
+            #{item.type},
+            #{item.startDt},
+            #{item.endDt},
+            #{item.memo},
+            #{item.slotCnt}
+            )
+        </foreach>
+        ON DUPLICATE KEY UPDATE
+            start_dt = VALUES( start_dt ),
+            end_dt = VALUES( end_dt ),
+            memo = VALUES( memo ),
+            slot_cnt =VALUES( slot_cnt )
+    </insert>
+
+    <select id="selectPayCount" resultType="Integer">
+        select
+             IFNULL(sum(slot_cnt), 0)
+         from pay
+        where 1 = 1
+         and del_yn = 'N'
+         and end_dt <![CDATA[ >= ]]> now()
+         and start_dt <![CDATA[ <= ]]> now()
+         and member_id = #{memberId}
+    </select>
+
+    <select id="selectDsPayCount" resultType="Integer">
+        select
+            IFNULL(sum(slot_cnt), 0)
+        from pay
+        where 1 = 1
+          and del_yn = 'N'
+          and end_dt <![CDATA[ >= ]]> now()
+          and start_dt <![CDATA[ <= ]]> now()
+          and member_id in (
+            select member_id
+            from member
+            where manager_id = #{memberId}
+        )
+    </select>
+
+    <select id="selectAdminPayCount" resultType="Integer">
+        select
+            IFNULL(sum(slot_cnt), 0)
+        from pay
+        where 1 = 1
+          and del_yn = 'N'
+          and end_dt <![CDATA[ >= ]]> now()
+          and start_dt <![CDATA[ <= ]]> now()
+    </select>
+
+
+    <delete id="deletePayByMemberId">
+        update pay
+        set del_yn = 'Y'
+        where member_id in
+        <foreach item="item" index="index" collection="list"
+                 open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </delete>
+
+    <select id="selectPayTypeCount" resultType="map">
+        select
+            case when type = 'P' then 'PC'
+                 when type = 'M' then 'MOBILE'
+                 else ''
+            end as type,
+            sum(slot_cnt) count,
+            (select IFNULL(count(1), 0) from slot where member_id = p.member_id and type = p.type) use_count
+        from pay p
+        where 1 = 1
+          and member_id = #{memberId}
+          and del_yn = 'N'
+          and  START_DT <![CDATA[ <= ]]> now()
+          and END_DT <![CDATA[ >= ]]> now()
+        group by type
+    </select>
+
+    <select id="selectDsPayTypeCount" resultType="map">
+        select
+            case when type = 'P' then 'PC'
+                 when type = 'M' then 'MOBILE'
+                 else ''
+                end as type,
+            sum(slot_cnt) count,
+            (select IFNULL(count(1), 0) from slot where member_id  in (
+                    select member_id
+                    from member
+                    where manager_id = #{memberId}
+            ) and type = p.type) use_count
+        from pay p
+        where 1 = 1
+          and member_id  in (
+            select member_id
+            from member
+            where manager_id = #{memberId}
+          )
+          and del_yn = 'N'
+          and  START_DT <![CDATA[ <= ]]> now()
+          and END_DT <![CDATA[ >= ]]> now()
+        group by type
+    </select>
+
+    <select id="selectAdminPayTypeCount" resultType="map">
+        select
+            case when type = 'P' then 'PC'
+                 when type = 'M' then 'MOBILE'
+                 else ''
+                end as type,
+            sum(slot_cnt) count,
+            (select IFNULL(count(1), 0) from slot where type = p.type) use_count
+        from pay p
+        where 1 = 1
+          and del_yn = 'N'
+          and START_DT <![CDATA[ <= ]]> now()
+          and END_DT <![CDATA[ >= ]]> now()
+        group by type
+    </select>
+
+    <update id="updateEndDt">
+        update pay
+           set end_dt = DATE_ADD(end_dt, INTERVAL #{extendDay} DAY)
+         where pay_no in
+        <foreach item="item" index="index" collection="list"
+                 open="(" separator="," close=")">
+            #{item}
+        </foreach>
+
+    </update>
+
+</mapper>

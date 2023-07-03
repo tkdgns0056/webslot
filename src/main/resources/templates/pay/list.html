@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      layout:decorate="~{layout/default.html}"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<th:block layout:fragment="content">
+    <h1 class="h3 mb-3"><strong>슬롯</strong> 관리 ([[${param.memberId}]]) </h1>
+
+
+    <div class="row">
+        <div class="col-12 d-flex">
+            <div class="flex-fill mb-3">
+                <div class="row">
+
+                    <div class="col text-end">
+                        <button class="btn btn-primary" onclick="appendPay()">추가</button>
+                        <button class="btn btn-primary" onclick="deletePay()">삭제</button>
+                        <button class="btn btn-primary" onclick="savePay()">저장</button>
+                        <!--                        <button class="btn btn-primary">수정</button>-->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+
+    <div class="row">
+        <div class="col-12 d-flex">
+            <div class="card flex-fill">
+
+                <table id="list" class="table table-hover my-0">
+                    <thead>
+                    <tr>
+                        <th>
+                            <input class="form-check-input" id="check-all" type="checkbox">
+                        </th>
+                        <th class="d-none d-xl-table-cell">키워드 유형</th>
+                        <th class="d-none d-xl-table-cell">슬롯수</th>
+                        <th class="d-none d-md-table-cell">시작일자</th>
+                        <th class="d-none d-md-table-cell">종료일자</th>
+                        <th class="d-none d-md-table-cell">메모</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+
+                    <tr th:data-payno="${pay.payNo}"  data-type="old" th:each="pay,iterStat : ${pageInfo.list}">
+                        <td>
+                            <input class="form-check-input check" type="checkbox" >
+                        </td>
+                        <td class="d-none d-md-table-cell" >
+                            <select class="form-select f-type" disabled>
+                                <option th:value="P" th:selected="${pay.type eq 'P'}">PC</option>
+                                <option th:value="M" th:selected="${pay.type eq 'M'}">MOBILE</option>
+                            </select>
+                        </td>
+                        <td class="d-none d-md-table-cell" >
+                            <input class="form-control f-slot-cnt" oninput="onlyNumeric()" type="text" th:value="${pay.slotCnt}" th:disabled="${#authorization.expression('hasAnyAuthority(''DS'')')} ? 'disabled'">
+                        </td>
+
+                        <td class="d-none d-md-table-cell" >
+                            <input class="form-control f-start-dt datepicker" readonly type="text" th:value="${pay.startDt}" th:disabled="${#authorization.expression('hasAnyAuthority(''DS'')')} ? 'disabled'">
+                        </td>
+
+                        <td class="d-none d-md-table-cell" >
+                            <input class="form-control f-end-dt datepicker" type="text" readonly th:value="${pay.endDt}" th:disabled="${#authorization.expression('hasAnyAuthority(''DS'')')} ? 'disabled'">
+                        </td>
+
+                        <td class="d-none d-md-table-cell" >
+                            <input class="form-control f-memo" type="text" th:value="${pay.memo}" th:disabled="${#authorization.expression('hasAnyAuthority(''DS'')')} ? 'disabled'">
+                        </td>
+
+
+                    </tr>
+
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <input type="hidden" id="memberId" th:value="${param.memberId}">
+    </div>
+    <!-- 페이징 -->
+    <th:block th:include="~{/layout/fragments/paging.html}" />
+</th:block>
+
+<th:block layout:fragment="script">
+    <script type="text/javascript" th:inline="javascript">
+
+        $("#list").on("input", "[class*='f-']", function(){
+            $(this).closest("tr").find(".check").prop("checked", true);
+        })
+
+        $("#list").on("change", ".datepicker", function(){
+            $(this).closest("tr").find(".check").prop("checked", true);
+        })
+
+
+        $('.datepicker').datepicker({format: "yyyy-mm-dd", language: 'ko'});
+
+        let deletePayNos = [];
+        let savePays = [];
+        let roleId = /*[[${#authentication.principal.member.roleId}]]*/null;
+        // 올 체크 처리
+        $("#check-all").click(function(){
+            const checked = $(this).prop("checked");
+            if(checked){
+                $(".check").prop("checked", true);
+            } else{
+                $(".check").prop("checked", false);
+            }
+        })
+
+        // 결제 저장
+        function savePay(){
+
+            let isValidate = true;
+            let message = '';
+
+            $(".check:checked").each(function(index){
+                const $tr = $(this).closest("tr");
+                const slotCnt = $tr.find(".f-slot-cnt").val();
+
+                if(!slotCnt){
+                    isValidate = false;
+                    message = `[ERROR][${index + 1}행] 슬롯수를 입력하세요.`;
+                    return false;
+                }
+
+                savePays.push({
+                    payNo: $tr.data("payno") ? $tr.data("payno") : null,
+                    memberId: $("#memberId").val(),
+                    type : $tr.find(".f-type").val(),
+                    slotCnt : slotCnt,
+                    startDt : $tr.find(".f-start-dt").val(),
+                    endDt : $tr.find(".f-end-dt").val(),
+                    memo : $tr.find(".f-memo").val()
+                })
+            })
+
+
+            if(!isValidate){
+                alert(message)
+                return;
+            }
+
+            // ajax 통신
+            $.ajax({
+                type : "POST",
+                contentType: "application/json",
+                url : "/pay/save",
+                data :JSON.stringify( {
+                    savePays: savePays,
+                    deletePayIds: deletePayNos
+                }),
+                success : function(response){
+                    alert("저장 되었습니다.");
+                    location.reload();
+                },
+                error: function (request, status, error){
+                    alert("에러 발생");
+                    deletePayNos = [];
+                    savePays = [];
+                }
+            });
+        }
+
+        // 결제 삭제
+        function deletePay(){
+            $(".check:checked").each(function(){
+                const $tr = $(this).closest("tr");
+                const type  = $tr.data("type");
+
+                if( type === 'old'){
+                    deletePayNos.push( $tr.data("payno"))
+                }
+
+                $tr.remove()
+            })
+        }
+
+        // 사용자 검색
+        function searchMember(){
+            const searchText = $("#searchText").val();
+            location.href = `/member/list?searchText=${searchText}`
+        }
+
+        // 사용자 추가
+        function appendPay(){
+            $("#list tbody").prepend(
+                `<tr data-type="new">
+                        <td>
+                            <input class="form-check-input check" type="checkbox" checked>
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <select class="form-select f-type">
+                                <option value="P" selected="selected">PC</option>
+                                <option value="M">MOBILE</option>
+                            </select>
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-slot-cnt" oninput="onlyNumeric()" type="text" value="">
+                        </td>
+
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-start-dt datepicker" readonly="" type="text" value="${moment().format('YYYY-MM-DD')}">
+                        </td>
+
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-end-dt datepicker" type="text" readonly="" value="${moment().add(30, 'days').format('YYYY-MM-DD')}">
+                        </td>
+
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-memo" type="text" value="">
+                        </td>
+
+
+                    </tr>
+                    `
+            )
+
+            $('.datepicker').datepicker({format: "yyyy-mm-dd", language: 'ko'});
+        }
+    </script>
+</th:block>
+
+
+</html>

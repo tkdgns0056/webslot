@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.example.slotweb.service.member.MemberMapper">
+
+    <select id="selectMember" parameterType="String" resultType="Member">
+        select member_id,
+               password,
+               manager_id,
+               role_id
+        from member
+        where member_id = #{memberId}
+          and del_yn = 'N'
+    </select>
+
+
+    <select id="selectDsMember" parameterType="String" resultType="Member">
+        select member_id
+        from member
+        where member_id = #{memberId}
+          and del_yn = 'N'
+          and role_id = 'DS'
+    </select>
+
+    <select id="checkDupMember" resultType="Integer">
+        select case
+                when count(1) > 0 then 1
+                else  0
+               end as cnt
+        from member
+        where member_id in
+        <foreach item="item" index="index" collection="list"
+                 open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </select>
+
+
+    <select id="selectMemberList" resultType="Member">
+        select m.member_id,
+               m.password,
+               m.manager_id,
+               m.role_id,
+               m.memo,
+               m.use_yn,
+              (select IFNULL(sum(slot_cnt), 0) from pay where START_DT <![CDATA[ <= ]]> now() and END_DT <![CDATA[ >= ]]> now() and member_id = m.member_id and del_yn = 'N' ) slot_total_cnt
+        from member m
+        where 1 = 1
+        and role_id != 'ADMIN'
+        and del_yn = 'N'
+        <if test="searchText!=null and !searchText.equals('')">
+            and m.member_id LIKE CONCAT('%', #{searchText}, '%')
+        </if>
+        <if test="managerId!=null and !managerId.equals('')">
+            and m.manager_id = #{managerId}
+        </if>
+
+    </select>
+
+    <delete id="deleteMember">
+        update  member
+        set del_yn = 'Y'
+        where member_id in
+        <foreach item="item" index="index" collection="list"
+                 open="(" separator="," close=")">
+            #{item}
+        </foreach>
+    </delete>
+
+    <insert id="saveMember">
+
+        insert into member
+        (
+            member_id,
+            password,
+            manager_id,
+            role_id,
+            memo,
+            use_yn
+        )
+        VALUES
+        <foreach item="item" index="index" collection="list" separator="," >
+            (
+            #{item.memberId},
+            #{item.password},
+            #{item.managerId},
+            #{item.roleId},
+            #{item.memo},
+            #{item.useYn}
+            )
+        </foreach>
+        ON DUPLICATE KEY UPDATE
+            password = VALUES( password ),
+            role_id = VALUES( role_id ),
+            memo =VALUES( memo ),
+            use_yn =VALUES( use_yn )
+    </insert>
+
+</mapper>

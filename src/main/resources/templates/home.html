@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="ko"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      layout:decorate="~{layout/default.html}">
+
+<th:block layout:fragment="content">
+
+    <div class="row">
+        <div class="col-12 d-flex">
+            <div class="w-100">
+                <div class="row">
+                    <div class="col-sm-2">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col mt-0">
+                                        <h5 class="card-title">총 슬롯</h5>
+                                    </div>
+
+                                    <div class="col-auto">
+                                        <div class="stat text-primary">
+                                            <i class="align-middle" data-feather="package"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <h1 class="mt-1 mb-3" th:text="${totalSlotCnt}"></h1>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-sm-2"  th:each="item : ${payTypeCntList}">
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col mt-0">
+                                        <h5 class="card-title" th:text="${item.type}"></h5>
+                                    </div>
+
+                                    <div class="col-auto">
+                                        <div class="stat text-primary">
+                                            <i class="align-middle" data-feather="package"></i>
+                                        </div>
+                                    </div>
+                                </div>
+                                <h1 class="mt-1 mb-3" th:text="${item.use_count} + ' / ' + ${item.count}"></h1>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="row">
+        <div class="col-12 d-flex">
+            <div class="flex-fill mb-3">
+                <div class="row">
+                    <div class="col-1">
+                        <select class="form-select f-type" id="searchType">
+                            <option value="" th:selected="${searchType eq ''}">전체</option>
+                            <option th:value="P" th:selected="${searchType eq 'P'}">PC</option>
+                            <option th:value="M" th:selected="${searchType eq 'M'}">MOBILE</option>
+                        </select>
+                    </div>
+                    <div class="col-3">
+                        <input type="text" id="searchText" th:value="${searchText}" class="form-control" placeholder="검색어">
+                    </div>
+                    <div class="col-1">
+                        <button class="btn btn-primary " onclick="search()">검색</button>
+                    </div>
+
+                    <div class="col text-end">
+                        <input type="text" id="extendDay" oninput="onlyNumeric()" class="form-control" style="display: inline-block;width: 50px; position: relative; top: 2px;" placeholder="연장일" sec:authorize="hasAuthority('ADMIN')" th:value="1" maxlength="2">
+                        <button class="btn btn-primary" onclick="extendSlot()" sec:authorize="hasAuthority('ADMIN')">연장</button>
+                        <button class="btn btn-primary" onclick="uploadExcel()" sec:authorize="!hasAuthority('ADMIN')">업로드</button>
+                        <button class="btn btn-primary" onclick="appendSlot()" sec:authorize="hasAuthority('USER')">추가</button>
+                        <button class="btn btn-primary" onclick="deleteSlot()">삭제</button>
+                        <button class="btn btn-primary" onclick="saveSlot()">저장</button>
+
+<!--                        <button class="btn btn-primary">수정</button>-->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <div class="row">
+        <div class="col-12 d-flex">
+            <div class="card flex-fill">
+
+                <table id="list" class="table table-hover my-0">
+                    <colgroup>
+                        <col width="5%">
+                        <col width="10%">
+                        <col width="7%">
+                        <col width="12%">
+                        <col width="*">
+                        <col width="12%">
+                        <col width="7%">
+                        <col width="7%">
+                        <col width="7%">
+                        <col width="7%">
+                        <col width="7%">
+                    </colgroup>
+                    <thead>
+                    <tr>
+                        <th>
+                            <input id="check-all" type="checkbox">
+                        </th>
+                        <th>키워드 유형</th>
+                        <th>ID</th>
+                        <th>상품명</th>
+                        <th class="d-none d-xl-table-cell">검색키워드</th>
+                        <th class="d-none d-xl-table-cell">서브키워드</th>
+                        <th class="d-none d-md-table-cell">카테고리번호</th>
+                        <th class="d-none d-md-table-cell">MID값</th>
+                        <th class="d-none d-md-table-cell">Ms값</th>
+                        <th class="d-none d-md-table-cell">메모</th>
+                        <th class="d-none d-md-table-cell">마감일</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+
+                    <tr data-type="old" th:data-slotno="${slot.slotNo}" th:data-payno="${slot.payNo}" th:each="slot,iterStat : ${pageInfo.list}">
+                        <td>
+                            <input id="check" class="check" type="checkbox">
+                        </td>
+                        <td class="d-none d-md-table-cell" >
+                            <select class="form-select f-type" disabled>
+                                <option th:value="P" th:selected="${slot.type eq 'P'}">PC</option>
+                                <option th:value="M" th:selected="${slot.type eq 'M'}">MOBILE</option>
+                            </select>
+                        </td>
+                        <td class="d-none d-md-table-cell" th:text="${slot.memberId}"></td>
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-product-name" type="text" th:value="${slot.productName}">
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-keyword" type="text" th:value="${slot.keyword}">
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-sub-keyword" type="text" th:value="${slot.subKeyword}">
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-category-no" oninput="onlyNumeric()" type="text" th:value="${slot.categoryNo}">
+                        </td>
+                        <td class="d-none d-md-table-cell" >
+                            <input class="form-control f-mid" oninput="onlyNumeric()" type="text" maxlength='13' th:value="${slot.mid}">
+                        </td>
+                        <td class="d-none d-md-table-cell" >
+                            <input class="form-control f-ms" oninput="onlyNumeric()" type="text" maxlength='13' th:value="${slot.ms}">
+                        </td>
+                        <td class="d-none d-md-table-cell" >
+                            <input class="form-control f-memo" type="text" th:value="${slot.memo}">
+                        </td>
+                        <td class="d-none d-md-table-cell" th:text="${slot.expireDt}"></td>
+                    </tr>
+
+
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <input type="file" id="xlsxFile" onchange="onChangeFile()" style="display: none">
+    </div>
+    <!-- 페이징 -->
+    <th:block th:include="~{/layout/fragments/paging.html}" />
+</th:block>
+
+<th:block layout:fragment="script">
+    <script type="text/javascript" th:inline="javascript">
+
+        $("#list").on("input", "[class*='f-']", function(){
+            $(this).closest("tr").find(".check").prop("checked", true);
+        })
+
+        let deleteSlotNos = [];
+        let saveSlots = [];
+        let roleId = /*[[${#authentication.principal.member.roleId}]]*/null;
+
+        // 올 체크 처리
+        $("#check-all").click(function(){
+            const checked = $(this).prop("checked");
+            if(checked){
+                $(".check").prop("checked", true);
+            } else{
+                $(".check").prop("checked", false);
+            }
+        })
+
+        // 사용자 저장
+        function saveSlot(){
+            let isValidate = true;
+            let message = '';
+
+            $(".check:checked").each(function(index){
+                const $tr = $(this).closest("tr");
+                const productName = $tr.find(".f-product-name").val()
+                const keyword = $tr.find(".f-keyword").val();
+                const  subKeyword = $tr.find(".f-sub-keyword").val();
+                const  categoryNo = $tr.find(".f-category-no").val()
+                const  mid = $tr.find(".f-mid").val()
+                const  ms = $tr.find(".f-ms").val()
+
+                if(!productName){
+                    isValidate = false;
+                    message = `[ERROR][${index + 1}행] 상품명을 입력하세요.`;
+                    return false;
+                }
+
+                if(!keyword){
+                    isValidate = false;
+                    message = `[ERROR][${index + 1}행] 검색키워드를 입력하세요.`;
+                    return false;
+                }
+
+                // if(!subKeyword){
+                //     isValidate = false;
+                //     message = `[ERROR][${index + 1}행] 서브키워드를 입력하세요.`;
+                //     return false;
+                // }
+
+                if (!categoryNo) {
+                    isValidate = false;
+                    message = `[ERROR][${index + 1}행] 카테고리번호를 입력하세요.`;
+                    return false;
+                }
+
+                // 숫자 확인 유효성
+                if (!/^\d+$/.test(categoryNo)) {
+                    isValidate = false;
+                    message = `[ERROR][${index + 1}행] 카테고리번호는 숫자로 입력하세요.`;
+                    return false;
+                }
+
+                if (!mid) {
+                    isValidate = false;
+                    message = `[ERROR][${index + 1}행] MID를 입력하세요.`;
+                    return false;
+                }
+
+                // 숫자 확인 유효성
+                if (!/^\d+$/.test(mid)) {
+                    isValidate = false;
+                    message = `[ERROR][${index + 1}행] MID는 숫자로 입력하세요.`;
+                    return false;
+                }
+
+                if (mid.length > 13) {
+                    isValidate = false;
+                    message = `[ERROR][${index + 1}행] MID는 13자리 미만으로 입력해주세요.`;
+                    return false;
+                }
+                if (!ms) {
+                    isValidate = false;
+                    message = `[ERROR][${index + 1}행] MS를 입력하세요.`;
+                    return false;
+                }
+
+                // 숫자 확인 유효성
+                if (!/^\d+$/.test(ms)) {
+                    isValidate = false;
+                    message = `[ERROR][${index + 1}행] MS는 숫자로 입력하세요.`;
+                    return false;
+                }
+
+                if (ms.length > 13) {
+                    isValidate = false;
+                    message = `[ERROR][${index + 1}행] MS는 13자리 미만으로 입력해주세요.`;
+                    return false;
+                }
+
+                saveSlots.push({
+                    slotNo: $tr.data("slotno"),
+                    payNo : $tr.data("payNo"),
+                    type : $tr.find(".f-type").val(),
+                    productName : productName,
+                    keyword : keyword,
+                    subKeyword : subKeyword,
+                    categoryNo : categoryNo,
+                    mid : mid,
+                    ms : ms,
+                    memo : $tr.find(".f-memo").val(),
+                })
+            })
+
+            if(!isValidate){
+                alert(message)
+                return;
+            }
+
+            // ajax 통신
+            $.ajax({
+                type : "POST",
+                contentType: "application/json",
+                url : "/slot/save",
+                data :JSON.stringify( {
+                    saveSlots: saveSlots,
+                    deleteSlotNos : deleteSlotNos
+                }),
+                success : function(response){
+                    alert("저장 되었습니다.");
+                    location.reload();
+                },
+                error: function (response, status, error){
+                    alert(response.responseText);
+                    saveSlots = [];
+                    deleteSlotNos = [];
+                }
+            });
+        }
+
+        // 사용자 삭제
+        function deleteSlot(){
+            $(".check:checked").each(function(){
+                const $tr = $(this).closest("tr");
+                const type  = $tr.data("type");
+
+                if( type === 'old'){
+                    deleteSlotNos.push( $tr.data("slotno"))
+                }
+
+                $tr.remove()
+            })
+        }
+
+        // 사용자 검색
+        function search(){
+            const searchText = $("#searchText").val();
+            const searchType = $("#searchType").val();
+            location.href = `/?searchText=${searchText}&searchType=${searchType}`
+        }
+
+        // 선택연장
+        function extendSlot(){
+
+            const extendPayNos = [];
+
+            $(".check:checked").each(function(){
+                const $tr = $(this).closest("tr");
+
+                extendPayNos.push($tr.data("payno"))
+            })
+
+            // ajax 통신
+            $.ajax({
+                type : "POST",
+                contentType: "application/json",
+                url : "/pay/extend",
+                data :JSON.stringify( {
+                    extendPayNos: extendPayNos,
+                    extendDay : $("#extendDay").val(),
+                }),
+                success : function(response){
+                    alert("저장 되었습니다.");
+                    location.reload();
+                },
+                error: function (response, status, error){
+                    alert(response.responseText);
+                }
+            });
+
+        }
+
+        function uploadExcel(){
+            $("#xlsxFile").click();
+        }
+
+        function onChangeFile(){
+            common.excel.upload({
+                el: "#xlsxFile"
+                , serviceName: "slotService"
+                , params: null
+                , callback: function (result) {
+                    if(result.success){
+                        alert("업로드 완료");
+                        location.reload();
+                    } else {
+                        alert(result.error);
+                        location.reload();
+                    }
+                }
+            });
+        }
+
+        // 사용자 추가
+        function appendSlot(){
+            $("#list tbody").prepend(
+                `
+                  <tr data-type="new" >
+                        <td>
+                            <input id="check" class="check" type="checkbox" checked>
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <select class="form-select f-type">
+                                <option value="P" selected="selected">PC</option>
+                                <option value="M">MOBILE</option>
+                            </select>
+                        </td>
+                        <td class="d-none d-md-table-cell"></td>
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-product-name" type="text" value="">
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-keyword" type="text" value="">
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-sub-keyword" type="text" value="">
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-category-no"  oninput="onlyNumeric()" type="text" value="">
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-mid" oninput="onlyNumeric()"  type="text" value=""">
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-ms" oninput="onlyNumeric()" type="text" value="">
+                        </td>
+                        <td class="d-none d-md-table-cell">
+                            <input class="form-control f-memo" type="text" value="">
+                        </td>
+                        <td class="d-none d-md-table-cell">&nbsp;</td>
+                    </tr>
+                    `
+            )
+        }
+
+    </script>
+</th:block>
+
+
+</html>
